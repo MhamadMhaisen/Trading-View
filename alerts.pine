@@ -1,0 +1,56 @@
+//@version=4
+study("Divergence Indicator Alert", overlay=true)
+
+// Define symbols
+symbol1 = "BTCUSDT"
+
+// Define inputs
+len = input(title="Length", type=input.integer, defval=14)
+src = input(title="Source", type=input.source, defval=close)
+lookback = input(title="Lookback", type=input.integer, defval=50)
+
+// Define the Divergence Indicator function
+length = input(14, minval=1)
+src_val = input(close)
+rsi1 = rsi(src_val, length)
+rsi2 = rsi(rsi1, length)
+b = input(false, title="Bearish Divergence")
+h = input(false, title="Hidden Bearish Divergence")
+b_bull = input(false, title="Bullish Divergence")
+h_bull = input(false, title="Hidden Bullish Divergence")
+line_color = input(color.gray, title="Divergence Line Color")
+fill_color = input(color.gray, title="Background Color")
+
+u = (h or b_bull) ? 0 : na
+l = (h_bull or b) ? 100 : na
+b_color = (b or h_bull) ? #ff0000 : #009933
+s_color = (b or h_bull) ? #ff6666 : #00cc99
+
+plot(u, title="Upper Line", style=plot.style_linebr, color=line_color, linewidth=2, trackprice=false)
+plot(l, title="Lower Line", style=plot.style_linebr, color=line_color, linewidth=2, trackprice=false)
+
+div_rsi = b ? rsi1 - rsi2 : rsi2 - rsi1
+div_color = b ? b_color : s_color
+div_color_h = h ? b_color : s_color
+
+div_plot = plot(div_rsi, title="Divergence", color=div_color, style=plot.style_cross, trackprice=false, linewidth=2)
+
+div_hidden_plot = plot(na, title="Divergence Hidden", color=div_color_h, style=plot.style_cross, trackprice=false, linewidth=2)
+
+// Check for Bullish and Bearish Signals
+bullish = div_rsi and div_rsi[1] < 0 and div_rsi > 0
+bearish = div_rsi and div_rsi[1] > 0 and div_rsi < 0
+
+// Send alerts when signals appear
+if bullish
+    alert("Bullish Divergence on " + tostring(symbol1))
+if bearish
+    alert("Bearish Divergence on " + tostring(symbol1))
+plotshape(series=div_rsi, title="Bullish Signal", style=shape.circle, color=color.green, location=location.absolute, offset=-1)
+
+plotshape(series=div_rsi, title="Bearish Signal", style=shape.circle, color=color.red, location=location.absolute, offset=-1)
+// Define the label text
+label_text = bullish ? "Bullish Divergence" : bearish ? "Bearish Divergence" : ""
+
+// Add a label to the chart
+label.new(bar_index, high, label_text, color=color.white, textcolor=color.black, style=label.style_label_up)
