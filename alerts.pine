@@ -1,5 +1,5 @@
 //@version=5
-indicator(title="Divergence Indicator with Alerts", shorttitle="DIV_AL", overlay=true)
+strategy(title="Divergence Indicator with Alerts", shorttitle="DIV_AL", overlay=true)
 
 len = input.int(title="RSI Period", minval=1, defval=14)
 src = input(title="RSI Source", defval=close)
@@ -154,23 +154,34 @@ plotshape(
 	 )
 
 
+
+
 // Draw custom Unicode arrow symbols for bullish and bearish conditions
 fontSize = "large" // Change this value to adjust the arrow size, use "small", "normal", or "large"
 
-if (bullCond)
-    label.new(x=bar_index - lbR, y=low, text="⬆", color=bullColor, size=fontSize, textcolor=bullColor, yloc=yloc.price, xloc=xloc.bar_index)
+anyDivergence = bullCond or bearCond or hiddenBullCond or hiddenBearCond
 
-if (bearCond)
-    label.new(x=bar_index - lbR, y=high, text="⬇", color=bearColor, size=fontSize, textcolor=bearColor, yloc=yloc.price, xloc=xloc.bar_index)
+if anyDivergence
+    if (bullCond)
+        label.new(x=bar_index - lbR, y=low, text="⬆", color=bullColor, size=fontSize, textcolor=bullColor, yloc=yloc.price, xloc=xloc.bar_index)
 
-if (hiddenBullCond)
-    label.new(x=bar_index - lbR, y=low, text="⬆", color=hiddenBullColor, size=fontSize, textcolor=hiddenBullColor, yloc=yloc.price, xloc=xloc.bar_index)
+        if (not strategy.position_size)
+            strategy.entry("Buy", strategy.long, 100, comment="Bullish Divergence")
+    
+    if (bearCond)
+        label.new(x=bar_index - lbR, y=high, text="⬇", color=bearColor, size=fontSize, textcolor=bearColor, yloc=yloc.price, xloc=xloc.bar_index)
 
-if (hiddenBearCond)
-    label.new(x=bar_index - lbR, y=high, text="⬇", color=hiddenBearColor, size=fontSize, textcolor=hiddenBearColor, yloc=yloc.price, xloc=xloc.bar_index)
+        if (not strategy.position_size)
+            strategy.entry("Sell", strategy.short, 100, comment="Bearish Divergence")
+    
+    if (hiddenBullCond)
+        label.new(x=bar_index - lbR, y=low, text="⬆", color=hiddenBullColor, size=fontSize, textcolor=hiddenBullColor, yloc=yloc.price, xloc=xloc.bar_index)
 
-// Alerts
-alertcondition(bullCond, title="Bullish Divergence", message="Bullish Divergence on {{ticker}} at {{close}}")
-alertcondition(bearCond, title="Bearish Divergence", message="Bearish Divergence on {{ticker}} at {{close}}")
-alertcondition(hiddenBullCond, title="Hidden Bullish Divergence", message="Hidden Bullish Divergence on {{ticker}} at {{close}}")
-alertcondition(hiddenBearCond, title="Hidden Bearish Divergence", message="Hidden Bearish Divergence on {{ticker}} at {{close}}")
+        if (not strategy.position_size)
+            strategy.entry("Buy", strategy.long, 100, comment="Hidden Bullish Divergence")
+    
+    if (hiddenBearCond)
+        label.new(x=bar_index - lbR, y=high, text="⬇", color=hiddenBearColor, size=fontSize, textcolor=hiddenBearColor, yloc=yloc.price, xloc=xloc.bar_index)
+
+        if (not strategy.position_size)
+            strategy.entry("Sell", strategy.short, 100, comment="Hidden Bearish Divergence")
