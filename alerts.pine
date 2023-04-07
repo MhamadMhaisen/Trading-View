@@ -1,56 +1,176 @@
-//@version=4
-study("Divergence Indicator Alert", overlay=true)
+//@version=5
+indicator(title="Divergence Indicator with Alerts", shorttitle="DIV_AL", overlay=true)
 
-// Define symbols
-symbol1 = "BTCUSDT"
+len = input.int(title="RSI Period", minval=1, defval=14)
+src = input(title="RSI Source", defval=close)
+lbR = input(title="Pivot Lookback Right", defval=5)
+lbL = input(title="Pivot Lookback Left", defval=5)
+rangeUpper = input(title="Max of Lookback Range", defval=60)
+rangeLower = input(title="Min of Lookback Range", defval=5)
+plotBull = input(title="Plot Bullish", defval=true)
+plotHiddenBull = input(title="Plot Hidden Bullish", defval=false)
+plotBear = input(title="Plot Bearish", defval=true)
+plotHiddenBear = input(title="Plot Hidden Bearish", defval=false)
+bearColor = color.red
+bullColor = color.green
+hiddenBullColor = color.new(color.green, 80)
+hiddenBearColor = color.new(color.red, 80)
+textColor = color.white
+noneColor = color.new(color.white, 100)
+osc = ta.rsi(src, len)
 
-// Define inputs
-len = input(title="Length", type=input.integer, defval=14)
-src = input(title="Source", type=input.source, defval=close)
-lookback = input(title="Lookback", type=input.integer, defval=50)
+plot(osc, title="RSI", linewidth=2, color=#2962FF)
+hline(50, title="Middle Line", color=#787B86, linestyle=hline.style_dotted)
+obLevel = hline(70, title="Overbought", color=#787B86, linestyle=hline.style_dotted)
+osLevel = hline(30, title="Oversold", color=#787B86, linestyle=hline.style_dotted)
+fill(obLevel, osLevel, title="Background", color=color.rgb(33, 150, 243, 90))
 
-// Define the Divergence Indicator function
-length = input(14, minval=1)
-src_val = input(close)
-rsi1 = rsi(src_val, length)
-rsi2 = rsi(rsi1, length)
-b = input(false, title="Bearish Divergence")
-h = input(false, title="Hidden Bearish Divergence")
-b_bull = input(false, title="Bullish Divergence")
-h_bull = input(false, title="Hidden Bullish Divergence")
-line_color = input(color.gray, title="Divergence Line Color")
-fill_color = input(color.gray, title="Background Color")
+plFound = na(ta.pivotlow(osc, lbL, lbR)) ? false : true
+phFound = na(ta.pivothigh(osc, lbL, lbR)) ? false : true
+_inRange(cond) =>
+	bars = ta.barssince(cond == true)
+	rangeLower <= bars and bars <= rangeUpper
 
-u = (h or b_bull) ? 0 : na
-l = (h_bull or b) ? 100 : na
-b_color = (b or h_bull) ? #ff0000 : #009933
-s_color = (b or h_bull) ? #ff6666 : #00cc99
+//------------------------------------------------------------------------------
+// Regular Bullish
+// Osc: Higher Low
 
-plot(u, title="Upper Line", style=plot.style_linebr, color=line_color, linewidth=2, trackprice=false)
-plot(l, title="Lower Line", style=plot.style_linebr, color=line_color, linewidth=2, trackprice=false)
+oscHL = osc[lbR] > ta.valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
 
-div_rsi = b ? rsi1 - rsi2 : rsi2 - rsi1
-div_color = b ? b_color : s_color
-div_color_h = h ? b_color : s_color
+// Price: Lower Low
 
-div_plot = plot(div_rsi, title="Divergence", color=div_color, style=plot.style_cross, trackprice=false, linewidth=2)
+priceLL = low[lbR] < ta.valuewhen(plFound, low[lbR], 1)
+bullCond = plotBull and priceLL and oscHL and plFound
 
-div_hidden_plot = plot(na, title="Divergence Hidden", color=div_color_h, style=plot.style_cross, trackprice=false, linewidth=2)
+plot(
+     plFound ? osc[lbR] : na,
+     offset=-lbR,
+     title="Regular Bullish",
+     linewidth=2,
+     color=(bullCond ? bullColor : noneColor)
+     )
 
-// Check for Bullish and Bearish Signals
-bullish = div_rsi and div_rsi[1] < 0 and div_rsi > 0
-bearish = div_rsi and div_rsi[1] > 0 and div_rsi < 0
+plotshape(
+	 bullCond ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Regular Bullish Label",
+	 text=" Bull ",
+	 style=shape.labelup,
+	 location=location.absolute,
+	 color=bullColor,
+	 textcolor=textColor
+	 )
 
-// Send alerts when signals appear
-if bullish
-    alert("Bullish Divergence on " + tostring(symbol1))
-if bearish
-    alert("Bearish Divergence on " + tostring(symbol1))
-plotshape(series=div_rsi, title="Bullish Signal", style=shape.circle, color=color.green, location=location.absolute, offset=-1)
+//------------------------------------------------------------------------------
+// Hidden Bullish
+// Osc: Lower Low
 
-plotshape(series=div_rsi, title="Bearish Signal", style=shape.circle, color=color.red, location=location.absolute, offset=-1)
-// Define the label text
-label_text = bullish ? "Bullish Divergence" : bearish ? "Bearish Divergence" : ""
+oscLL = osc[lbR] < ta.valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
 
-// Add a label to the chart
-label.new(bar_index, high, label_text, color=color.white, textcolor=color.black, style=label.style_label_up)
+// Price: Higher Low
+
+priceHL = low[lbR] > ta.valuewhen(plFound, low[lbR], 1)
+hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound
+
+plot(
+	 plFound ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Hidden Bullish",
+	 linewidth=2,
+	 color=(hiddenBullCond ? hiddenBullColor : noneColor)
+	 )
+
+plotshape(
+	 hiddenBullCond ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Hidden Bullish Label",
+	 text=" H Bull ",
+	 style=shape.labelup,
+	 location=location.absolute,
+	 color=bullColor,
+	 textcolor=textColor
+	 )
+
+//------------------------------------------------------------------------------
+// Regular Bearish
+// Osc: Lower High
+
+oscLH = osc[lbR] < ta.valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+
+// Price: Higher High
+
+priceHH = high[lbR] > ta.valuewhen(phFound, high[lbR], 1)
+
+bearCond = plotBear and priceHH and oscLH and phFound
+
+plot(
+	 phFound ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Regular Bearish",
+	 linewidth=2,
+	 color=(bearCond ? bearColor : noneColor)
+	 )
+
+plotshape(
+	 bearCond ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Regular Bearish Label",
+	 text=" Bear ",
+	 style=shape.labeldown,
+	 location=location.absolute,
+	 color=bearColor,
+	 textcolor=textColor
+	 )
+
+//------------------------------------------------------------------------------
+// Hidden Bearish
+// Osc: Higher High
+
+oscHH = osc[lbR] > ta.valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+
+// Price: Lower High
+
+priceLH = high[lbR] < ta.valuewhen(phFound, high[lbR], 1)
+
+hiddenBearCond = plotHiddenBear and priceLH and oscHH and phFound
+
+plot(
+	 phFound ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Hidden Bearish",
+	 linewidth=2,
+	 color=(hiddenBearCond ? hiddenBearColor : noneColor)
+	 )
+
+plotshape(
+	 hiddenBearCond ? osc[lbR] : na,
+	 offset=-lbR,
+	 title="Hidden Bearish Label",
+	 text=" H Bear ",
+	 style=shape.labeldown,
+	 location=location.absolute,
+	 color=bearColor,
+	 textcolor=textColor
+	 )
+
+
+// Draw custom Unicode arrow symbols for bullish and bearish conditions
+fontSize = "large" // Change this value to adjust the arrow size, use "small", "normal", or "large"
+
+if (bullCond)
+    label.new(x=bar_index - lbR, y=low, text="⬆", color=bullColor, size=fontSize, textcolor=bullColor, yloc=yloc.price, xloc=xloc.bar_index)
+
+if (bearCond)
+    label.new(x=bar_index - lbR, y=high, text="⬇", color=bearColor, size=fontSize, textcolor=bearColor, yloc=yloc.price, xloc=xloc.bar_index)
+
+if (hiddenBullCond)
+    label.new(x=bar_index - lbR, y=low, text="⬆", color=hiddenBullColor, size=fontSize, textcolor=hiddenBullColor, yloc=yloc.price, xloc=xloc.bar_index)
+
+if (hiddenBearCond)
+    label.new(x=bar_index - lbR, y=high, text="⬇", color=hiddenBearColor, size=fontSize, textcolor=hiddenBearColor, yloc=yloc.price, xloc=xloc.bar_index)
+
+// Alerts
+alertcondition(bullCond, title="Bullish Divergence", message="Bullish Divergence on {{ticker}} at {{close}}")
+alertcondition(bearCond, title="Bearish Divergence", message="Bearish Divergence on {{ticker}} at {{close}}")
+alertcondition(hiddenBullCond, title="Hidden Bullish Divergence", message="Hidden Bullish Divergence on {{ticker}} at {{close}}")
+alertcondition(hiddenBearCond, title="Hidden Bearish Divergence", message="Hidden Bearish Divergence on {{ticker}} at {{close}}")
