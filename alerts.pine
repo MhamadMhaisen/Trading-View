@@ -1,7 +1,13 @@
-//@version=5
-strategy(title="Divergence Indicator with Alerts", shorttitle="DIV_AL", overlay=true)
+// Import sound library
+//@version=4
+study(title="Sound Library", overlay=true)
 
-len = input.int(title="RSI Period", minval=1, defval=14)
+
+// Enable sound
+sound_on = true
+
+// Inputs
+len = input(title="RSI Period", type=input.integer, defval=14, minval=1)
 src = input(title="RSI Source", defval=close)
 lbR = input(title="Pivot Lookback Right", defval=5)
 lbL = input(title="Pivot Lookback Left", defval=5)
@@ -11,177 +17,65 @@ plotBull = input(title="Plot Bullish", defval=true)
 plotHiddenBull = input(title="Plot Hidden Bullish", defval=false)
 plotBear = input(title="Plot Bearish", defval=true)
 plotHiddenBear = input(title="Plot Hidden Bearish", defval=false)
+
+// Colors
 bearColor = color.red
 bullColor = color.green
 hiddenBullColor = color.new(color.green, 80)
 hiddenBearColor = color.new(color.red, 80)
 textColor = color.white
 noneColor = color.new(color.white, 100)
-osc = ta.rsi(src, len)
 
+// RSI
+osc = rsi(src, len)
 plot(osc, title="RSI", linewidth=2, color=#2962FF)
 hline(50, title="Middle Line", color=#787B86, linestyle=hline.style_dotted)
 obLevel = hline(70, title="Overbought", color=#787B86, linestyle=hline.style_dotted)
 osLevel = hline(30, title="Oversold", color=#787B86, linestyle=hline.style_dotted)
 fill(obLevel, osLevel, title="Background", color=color.rgb(33, 150, 243, 90))
 
-plFound = na(ta.pivotlow(osc, lbL, lbR)) ? false : true
-phFound = na(ta.pivothigh(osc, lbL, lbR)) ? false : true
+// Pivot highs and lows
+plFound = na(pivotlow(osc, lbL, lbR)) ? false : true
+phFound = na(pivothigh(osc, lbL, lbR)) ? false : true
 _inRange(cond) =>
-	bars = ta.barssince(cond == true)
-	rangeLower <= bars and bars <= rangeUpper
+    bars = barssince(cond == true)
+    rangeLower <= bars and bars <= rangeUpper
 
-//------------------------------------------------------------------------------
-// Regular Bullish
-// Osc: Higher Low
-
-oscHL = osc[lbR] > ta.valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
-
-// Price: Lower Low
-
-priceLL = low[lbR] < ta.valuewhen(plFound, low[lbR], 1)
+// Regular bullish
+oscHL = osc[lbR] > valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
+priceLL = low[lbR] < valuewhen(plFound, low[lbR], 1)
 bullCond = plotBull and priceLL and oscHL and plFound
 
-plot(
-     plFound ? osc[lbR] : na,
-     offset=-lbR,
-     title="Regular Bullish",
-     linewidth=2,
-     color=(bullCond ? bullColor : noneColor)
-     )
-
-plotshape(
-	 bullCond ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Regular Bullish Label",
-	 text=" Bull ",
-	 style=shape.labelup,
-	 location=location.absolute,
-	 color=bullColor,
-	 textcolor=textColor
-	 )
-
-//------------------------------------------------------------------------------
-// Hidden Bullish
-// Osc: Lower Low
-
-oscLL = osc[lbR] < ta.valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
-
-// Price: Higher Low
-
-priceHL = low[lbR] > ta.valuewhen(plFound, low[lbR], 1)
+// Hidden bullish
+oscLL = osc[lbR] < valuewhen(plFound, osc[lbR], 1) and _inRange(plFound[1])
+priceHL = low[lbR] > valuewhen(plFound, low[lbR], 1)
 hiddenBullCond = plotHiddenBull and priceHL and oscLL and plFound
-
-plot(
-	 plFound ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Hidden Bullish",
-	 linewidth=2,
-	 color=(hiddenBullCond ? hiddenBullColor : noneColor)
-	 )
-
-plotshape(
-	 hiddenBullCond ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Hidden Bullish Label",
-	 text=" H Bull ",
-	 style=shape.labelup,
-	 location=location.absolute,
-	 color=bullColor,
-	 textcolor=textColor
-	 )
-
-//------------------------------------------------------------------------------
-// Regular Bearish
-// Osc: Lower High
-
-oscLH = osc[lbR] < ta.valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
-
-// Price: Higher High
-
-priceHH = high[lbR] > ta.valuewhen(phFound, high[lbR], 1)
-
+// Regular bearish
+oscLH = osc[lbR] < valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+priceHH = high[lbR] > valuewhen(phFound, high[lbR], 1)
 bearCond = plotBear and priceHH and oscLH and phFound
 
-plot(
-	 phFound ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Regular Bearish",
-	 linewidth=2,
-	 color=(bearCond ? bearColor : noneColor)
-	 )
-
-plotshape(
-	 bearCond ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Regular Bearish Label",
-	 text=" Bear ",
-	 style=shape.labeldown,
-	 location=location.absolute,
-	 color=bearColor,
-	 textcolor=textColor
-	 )
-
-//------------------------------------------------------------------------------
-// Hidden Bearish
-// Osc: Higher High
-
-oscHH = osc[lbR] > ta.valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
-
-// Price: Lower High
-
-priceLH = high[lbR] < ta.valuewhen(phFound, high[lbR], 1)
-
+// Hidden bearish
+oscHH = osc[lbR] > valuewhen(phFound, osc[lbR], 1) and _inRange(phFound[1])
+priceLH = high[lbR] < valuewhen(phFound, high[lbR], 1)
 hiddenBearCond = plotHiddenBear and priceLH and oscHH and phFound
 
-plot(
-	 phFound ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Hidden Bearish",
-	 linewidth=2,
-	 color=(hiddenBearCond ? hiddenBearColor : noneColor)
-	 )
+// Plots
+plot(plFound ? osc[lbR] : na,offset=-lbR,title="Regular Bullish",linewidth=2,color=(bullCond ? bullColor : noneColor))
+plotshape(bullCond ? osc[lbR] : na,offset=-lbR,title="Regular Bullish Label",text=" Buy ",style=shape.labelup,location=location.absolute,color=bullColor,textcolor=textColor)
 
-plotshape(
-	 hiddenBearCond ? osc[lbR] : na,
-	 offset=-lbR,
-	 title="Hidden Bearish Label",
-	 text=" H Bear ",
-	 style=shape.labeldown,
-	 location=location.absolute,
-	 color=bearColor,
-	 textcolor=textColor
-	 )
+plot(plFound ? osc[lbR] : na,offset=-lbR,title="Hidden Bullish",linewidth=2,color=(hiddenBullCond ? hiddenBullColor : noneColor))
+plotshape(hiddenBullCond ? osc[lbR] : na,offset=-lbR,title="Hidden Bullish Label",text=" Buy ",style=shape.labelup,location=location.absolute,color=bullColor,textcolor=textColor)
 
+plot(phFound ? osc[lbR] : na,offset=-lbR,title="Regular Bearish",linewidth=2,color=(bearCond ? bearColor : noneColor))
+plotshape(bearCond ? osc[lbR] : na,offset=-lbR,title="Regular Bearish Label",text=" Sell ",style=shape.labeldown,location=location.absolute,color=bearColor,textcolor=textColor)
 
+plot(phFound ? osc[lbR] : na,offset=-lbR,title="Hidden Bearish",linewidth=2,color=(hiddenBearCond ? hiddenBearColor : noneColor))
+plotshape(hiddenBearCond ? osc[lbR] : na,offset=-lbR,title="Hidden Bearish Label",text=" Sell ",style=shape.labeldown,location=location.absolute,color=bearColor,textcolor=textColor)
 
-
-// Draw custom Unicode arrow symbols for bullish and bearish conditions
-fontSize = "large" // Change this value to adjust the arrow size, use "small", "normal", or "large"
-
-anyDivergence = bullCond or bearCond or hiddenBullCond or hiddenBearCond
-
-if anyDivergence
-    if (bullCond)
-        label.new(x=bar_index - lbR, y=low, text="⬆", color=bullColor, size=fontSize, textcolor=bullColor, yloc=yloc.price, xloc=xloc.bar_index)
-
-        if (not strategy.position_size)
-            strategy.entry("Buy", strategy.long, 100, comment="Bullish Divergence")
-    
-    if (bearCond)
-        label.new(x=bar_index - lbR, y=high, text="⬇", color=bearColor, size=fontSize, textcolor=bearColor, yloc=yloc.price, xloc=xloc.bar_index)
-
-        if (not strategy.position_size)
-            strategy.entry("Sell", strategy.short, 100, comment="Bearish Divergence")
-    
-    if (hiddenBullCond)
-        label.new(x=bar_index - lbR, y=low, text="⬆", color=hiddenBullColor, size=fontSize, textcolor=hiddenBullColor, yloc=yloc.price, xloc=xloc.bar_index)
-
-        if (not strategy.position_size)
-            strategy.entry("Buy", strategy.long, 100, comment="Hidden Bullish Divergence")
-    
-    if (hiddenBearCond)
-        label.new(x=bar_index - lbR, y=high, text="⬇", color=hiddenBearColor, size=fontSize, textcolor=hiddenBearColor, yloc=yloc.price, xloc=xloc.bar_index)
-
-        if (not strategy.position_size)
-            strategy.entry("Sell", strategy.short, 100, comment="Hidden Bearish Divergence")
+// Alert and sound for all conditions
+divFound = bullCond or hiddenBullCond or bearCond or hiddenBearCond
+if divFound
+    alert("Divergence detected")
+    if sound_on
+        alert("Sound Notification", alert.freq_once_per_bar)
